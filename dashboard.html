@@ -40,34 +40,48 @@
             </div>
 
             <div id="sidebar-users-section" class="hidden" style="padding: 10px;">
-                <input type="text" id="search-users-input" placeholder="Search users by username..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; margin-bottom: 10px;">
+                <p style="font-size: 11px; color:#ef4444; margin-bottom: 6px; font-weight: bold;">🔒 Enter full exact username or email address:</p>
+                <input type="text" id="search-users-input" placeholder="Type exact full name..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; margin-bottom: 10px;">
                 <div class="users-list" id="users-container"></div>
             </div>
         </div>
 
-        <div class="chat-area" id="chat-area-fallback">
-            <div class="no-chat-message">
-                <h2>Welcome to MWAMINI CHATTING SITE</h2>
-                <p>Pick a group on the side panel or build a new one to begin chatting.</p>
+        <div class="chat-area" id="chat-area-fallback" style="background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);">
+            <div class="no-chat-message" style="text-align: center; padding: 40px; background: rgba(255, 255, 255, 0.9); border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); max-width: 500px;">
+                <div style="font-size: 50px; margin-bottom: 15px;">✨</div>
+                <h2 style="color: #102a43; font-size: 26px; margin-bottom: 10px; font-weight: 700;">Welcome to MWAMINI CHATTING SITE</h2>
+                <p style="color: #627d98; font-size: 14px; line-height: 1.5;">Pick a secure conversation path from the side directory or set up an exclusive messaging workspace to begin.</p>
             </div>
         </div>
 
-        <div class="chat-area hidden" id="chat-area-active">
-            <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="chat-area hidden" id="chat-area-active" style="position: relative; transition: background 0.3s ease;">
+            <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center; z-index: 10; background: rgba(255,255,255,0.95); backdrop-filter: blur(5px);">
                 <div>
                     <h3 id="active-group-title">Group Name</h3>
                     <p id="group-role-indicator" style="font-size: 11px; color: #6b7280;"></p>
                 </div>
-                <div id="creator-admin-panel" class="hidden">
-                    <button id="view-requests-btn" style="background:#4f46e5; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:12px; cursor:pointer;">
-                        Manage Join Requests (<span id="request-count">0</span>)
-                    </button>
+                
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 12px; font-weight: bold; color: #444;">🎨 Theme:</span>
+                    <select id="chat-wallpaper-picker" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-size: 12px;">
+                        <option value="default">Classic Grey</option>
+                        <option value="mint">Teal Mint Mint</option>
+                        <option value="dark">Secure Dark Night</option>
+                        <option value="lavender">Soft Lavender</option>
+                        <option value="sunset">Sunset Glow</option>
+                    </select>
+                    
+                    <div id="creator-admin-panel" class="hidden">
+                        <button id="view-requests-btn" style="background:#4f46e5; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:12px; cursor:pointer;">
+                            Join Requests (<span id="request-count">0</span>)
+                        </button>
+                    </div>
                 </div>
             </div>
             
-            <div class="messages-container" id="messages-display"></div>
+            <div class="messages-container" id="messages-display" style="position: relative; z-index: 2;"></div>
 
-            <form id="send-message-form">
+            <form id="send-message-form" style="z-index: 10; background: white;">
                 <input type="file" id="message-file-input">
                 <input type="text" id="message-text-input" placeholder="Type verified encrypted message..." autocomplete="off">
                 <button type="submit">Send</button>
@@ -104,10 +118,10 @@
     </div>
 
     <div id="status-modal" class="modal hidden">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
             <span class="close-modal" id="close-modal-btn">&times;</span>
-            <h2>Active MWAMINI Status Updates (48 Hours)</h2>
-            <div class="status-grid" id="status-viewer-grid"></div>
+            <h2 style="margin-bottom: 15px;">Active MWAMINI Status Updates</h2>
+            <div class="status-grid" id="status-viewer-grid" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;"></div>
         </div>
     </div>
 
