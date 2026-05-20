@@ -2,19 +2,18 @@ import { initializeApp } from "firebase/app";
 import { 
     getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
     signInAnonymously, sendEmailVerification, GoogleAuthProvider, 
-    signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged 
+    signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged,
+    sendPasswordResetEmail
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
-// TODO: Replace with your actual Firebase project credentials configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyA_ZO0DokMWmXWHYa0GJozOYmsKwJLFX_0",
-  authDomain: "mwamini-chat-site.firebaseapp.com",
-  projectId: "mwamini-chat-site",
-  storageBucket: "mwamini-chat-site.firebasestorage.app",
-  messagingSenderId: "403012103548",
-  appId: "1:403012103548:web:d86e99a4723dbdc1fd88f9",
-  measurementId: "G-M6YZ1H0R3H"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -27,6 +26,7 @@ const passwordInput = document.getElementById("password");
 const authTitle = document.getElementById("auth-title");
 const submitBtn = document.getElementById("submit-btn");
 const toggleLink = document.getElementById("toggle-link");
+const forgotPasswordLink = document.getElementById("forgot-password-link");
 const phoneModal = document.getElementById("phone-modal");
 const phoneStepA = document.getElementById("phone-step-a");
 const phoneStepB = document.getElementById("phone-step-b");
@@ -34,10 +34,26 @@ const phoneStepB = document.getElementById("phone-step-b");
 let isLoginMode = true;
 let confirmationResultRef = null;
 
+// PASSWORD RESET ENGINE HANDLER
+forgotPasswordLink.addEventListener("click", async () => {
+    const email = emailInput.value.trim();
+    if (!email) {
+        alert("⚠️ Please enter your email address in the input field first, then click 'Forgot Password?'");
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert("🟢 Password reset secure token link dispatched! Please check your email inbox or spam folder.");
+    } catch (error) {
+        alert("Reset Error: " + error.message);
+    }
+});
+
 toggleLink.addEventListener("click", () => {
     isLoginMode = !isLoginMode;
     authTitle.innerText = isLoginMode ? "Secure Login" : "Register Secure Account";
     submitBtn.innerText = isLoginMode ? "Sign In with Email" : "Register & Send Verification Link";
+    forgotPasswordLink.style.display = isLoginMode ? "inline" : "none";
     document.getElementById("toggle-auth").innerHTML = isLoginMode ? 
         `Don't have an account? <span id="toggle-link" style="color:#00a884; font-weight:bold; cursor:pointer;">Register here</span>` : 
         `Already have an account? <span id="toggle-link" style="color:#00a884; font-weight:bold; cursor:pointer;">Login here</span>`;
