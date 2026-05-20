@@ -35,7 +35,6 @@ const phoneStepB = document.getElementById("phone-step-b");
 let isLoginMode = true;
 let confirmationResultRef = null;
 
-// PASSWORD RESET ENGINE HANDLER
 forgotPasswordLink.addEventListener("click", async () => {
     const email = emailInput.value.trim();
     if (!email) {
