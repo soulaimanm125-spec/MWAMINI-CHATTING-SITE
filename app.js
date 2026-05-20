@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { 
     getFirestore, collection, addDoc, query, orderBy, onSnapshot, 
-    doc, deleteDoc, serverTimestamp, Timestamp, getDoc, setDoc, updateDoc 
+    doc, deleteDoc, serverTimestamp, Timestamp, getDoc, setDoc, updateDoc, where 
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
@@ -25,10 +25,12 @@ const storage = getStorage(app);
 let loggedInUser = null;
 let activeGroupId = null;
 let activeGroupData = null;
+let chatType = "group"; // Tracks either "group" or "direct"
 let messagesUnsubscribe = null;
 let requestsUnsubscribe = null;
 
 const groupsContainer = document.getElementById("groups-container");
+const usersContainer = document.getElementById("users-container");
 const chatAreaFallback = document.getElementById("chat-area-fallback");
 const chatAreaActive = document.getElementById("chat-area-active");
 const activeGroupTitle = document.getElementById("active-group-title");
@@ -38,6 +40,27 @@ const createGroupForm = document.getElementById("create-group-form");
 const sendMsgForm = document.getElementById("send-message-form");
 const creatorAdminPanel = document.getElementById("creator-admin-panel");
 const requestCount = document.getElementById("request-count");
+
+// Sidebar tab DOM references
+const tabGroups = document.getElementById("tab-groups");
+const tabUsers = document.getElementById("tab-users");
+const groupSection = document.getElementById("sidebar-groups-section");
+const userSection = document.getElementById("sidebar-users-section");
+const searchUsersInput = document.getElementById("search-users-input");
+
+// --- SIDEBAR TAB WORKSPACE SELECTION NAVIGATION ---
+tabGroups.addEventListener("click", () => {
+    tabGroups.style.background = "#f0f2f5"; tabGroups.style.borderBottom = "2px solid #00a884";
+    tabUsers.style.background = "#fff"; tabUsers.style.borderBottom = "2px solid transparent";
+    groupSection.classList.remove("hidden"); userSection.classList.add("hidden");
+});
+
+tabUsers.addEventListener("click", () => {
+    tabUsers.style.background = "#f0f2f5"; tabUsers.style.borderBottom = "2px solid #00a884";
+    tabGroups.style.background = "#fff"; tabGroups.style.borderBottom = "2px solid transparent";
+    userSection.classList.remove("hidden"); groupSection.classList.add("hidden");
+    loadUserDirectory();
+});
 
 function setupPresenceSystem(user) {
     const userDocRef = doc(db, "users", user.uid);
@@ -52,17 +75,144 @@ onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = "index.html"; } 
     else {
         loggedInUser = user;
-        document.getElementById("user-display-name").innerText = user.email ? user.email.split('@')[0] : "🟢 Online Guest User";
+        
+        // Dynamic display verification logic
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        let displayHandle = user.email ? user.email.split('@')[0] : "Online Guest User";
+        if (userDoc.exists() && userDoc.data().username) {
+            displayHandle = userDoc.data().username;
+        }
+        document.getElementById("user-display-name").innerText = displayHandle;
+
         setupPresenceSystem(user);
         loadChatGroups();
         listenToMwaminiStatuses();
     }
 });
 
+// --- CUSTOM USERNAME MANAGEMENT INTERFACE ---
+document.getElementById("edit-username-btn").addEventListener("click", async () => {
+    document.getElementById("username-modal").classList.remove("hidden");
+    const userDoc = await getDoc(doc(db, "users", loggedInUser.uid));
+    if (userDoc.exists() && userDoc.data().username) {
+        document.getElementById("custom-username-input").value = userDoc.data().username;
+    }
+});
+document.getElementById("close-username-modal-btn").addEventListener("click", () => document.getElementById("username-modal").classList.add("hidden"));
+
+document.getElementById("save-username-btn").addEventListener("click", async () => {
+    const usernameVal = document.getElementById("custom-username-input").value.trim();
+    if (!usernameVal) return alert("Please type a valid handle prefix");
+
+    await updateDoc(doc(db, "users", loggedInUser.uid), { username: usernameVal });
+    document.getElementById("user-display-name").innerText = usernameVal;
+    document.getElementById("username-modal").classList.add("hidden");
+    alert("Username configured successfully!");
+    if (!userSection.classList.contains("hidden")) loadUserDirectory();
+});
+
 document.getElementById("logout-btn").addEventListener("click", async () => {
     if (loggedInUser) await updateDoc(doc(db, "users", loggedInUser.uid), { status: "offline" });
     signOut(auth);
 });
+
+// --- USER DISCOVERY PANEL AND DIRECT CHAT DIRECTORY ---
+function loadUserDirectory() {
+    const q = query(collection(db, "users"), orderBy("status", "desc"));
+    onSnapshot(q, (snapshot) => {
+        renderUsersList(snapshot.docs);
+    });
+}
+
+searchUsersInput.addEventListener("input", async () => {
+    const filterText = searchUsersInput.value.trim().toLowerCase();
+    const userSnaps = await getDoc(collection(db, "users"));
+    
+    // Quick memory mapping for responsive local filtering
+    const allUsersRef = collection(db, "users");
+    onSnapshot(allUsersRef, (snapshot) => {
+        const filteredDocs = snapshot.docs.filter(docSnap => {
+            const data = docSnap.data();
+            const targetName = data.username ? data.username.toLowerCase() : (data.email ? data.email.toLowerCase() : "");
+            return targetName.includes(filterText);
+        });
+        renderUsersList(filteredDocs);
+    });
+});
+
+function renderUsersList(docsList) {
+    usersContainer.innerHTML = "";
+    let cleanCount = 0;
+
+    docsList.forEach(docSnap => {
+        const userItem = docSnap.data();
+        if (userItem.uid === loggedInUser.uid) return; // Skip showing yourself
+
+        cleanCount++;
+        const resolvedName = userItem.username || (userItem.email ? userItem.email.split('@')[0] : "Online Guest User");
+        const isOnline = userItem.status === "online";
+
+        const userRow = document.createElement("div");
+        userRow.className = `group-item ${activeGroupId === userItem.uid ? 'active' : ''}`;
+        userRow.style = "padding: 12px 15px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; cursor: pointer;";
+        userRow.innerHTML = `
+            <div>
+                <h4 style="font-size:14px; margin:0; color:#111827;">${resolvedName}</h4>
+                <span style="font-size:11px; color:${isOnline ? '#22c55e':'#9ca3af'}; font-weight:500;">
+                    ${isOnline ? '● Active Now' : '● Offline'}
+                </span>
+            </div>
+            <button style="background:#00a884; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:11px; cursor:pointer;">Text</button>
+        `;
+
+        userRow.addEventListener("click", () => startDirectMessaging(userItem.uid, resolvedName));
+        usersContainer.appendChild(userRow);
+    });
+
+    if (cleanCount === 0) {
+        usersContainer.innerHTML = "<p style='padding:15px; color:#6b7280; font-size:13px;'>No registered or active workspace profiles found.</p>";
+    }
+}
+
+function startDirectMessaging(targetUid, targetName) {
+    chatType = "direct";
+    // Compute a unified message path hash by sorting IDs alphabetically
+    activeGroupId = loggedInUser.uid < targetUid ? `${loggedInUser.uid}_${targetUid}` : `${targetUid}_${loggedInUser.uid}`;
+    
+    const reqScreen = document.getElementById("request-screen");
+    if (reqScreen) reqScreen.remove();
+
+    chatAreaFallback.classList.add("hidden");
+    chatAreaActive.classList.remove("hidden");
+    activeGroupTitle.innerText = `💬 ${targetName}`;
+    groupRoleIndicator.innerText = "Secured End-to-End Direct Chat Workspace";
+    creatorAdminPanel.add("hidden"); // Admin operations are irrelevant inside personal messages
+
+    openPrivateStream(activeGroupId);
+}
+
+// --- UNIVERSAL MESSAGE ROOM STREAMS (BOTH DIRECT AND GROUP) ---
+function openPrivateStream(roomPathId) {
+    if (messagesUnsubscribe) messagesUnsubscribe();
+    
+    const q = query(collection(db, `directMessages/${roomPathId}/messages`), orderBy("timestamp", "asc"));
+    messagesUnsubscribe = onSnapshot(q, (snapshot) => {
+        messagesDisplay.innerHTML = "";
+        snapshot.docs.forEach(docSnap => {
+            const msg = docSnap.data();
+            const isMe = msg.senderId === loggedInUser.uid;
+            const card = document.createElement("div");
+            card.className = `message-card ${isMe ? 'sent' : 'received'}`;
+            card.innerHTML = `
+                <span class="msg-sender">${msg.senderName}</span>
+                <p>${msg.text}</p>
+                ${msg.fileUrl ? `<a href="${msg.fileUrl}" target="_blank" class="msg-file">📁 Shared File</a>` : ''}
+            `;
+            messagesDisplay.appendChild(card);
+        });
+        messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+    });
+}
 
 createGroupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -97,7 +247,7 @@ function loadChatGroups() {
                 <div><h4>${group.name}</h4><span style="font-size:10px; color:#888;">Owner: ${group.creatorEmail.split('@')[0]}</span></div>
                 ${group.createdBy === loggedInUser.uid ? `<button class="del-grp-btn" data-id="${id}">Delete</button>` : ''}
             `;
-            itemRow.addEventListener("click", () => evaluateRoomAccess(id, group));
+            itemRow.addEventListener("click", () => { chatType = "group"; evaluateRoomAccess(id, group); });
             groupsContainer.appendChild(itemRow);
         });
 
@@ -167,7 +317,7 @@ function openChatRoom(groupId, groupName) {
             const card = document.createElement("div");
             card.className = `message-card ${isMe ? 'sent' : 'received'}`;
             card.innerHTML = `
-                <span class="msg-sender">${msg.senderEmail.split('@')[0]}</span>
+                <span class="msg-sender">${msg.senderEmail ? msg.senderEmail.split('@')[0] : (msg.senderName || 'User')}</span>
                 <p>${msg.text}</p>
                 ${msg.fileUrl ? `<a href="${msg.fileUrl}" target="_blank" class="msg-file">📁 Shared File</a>` : ''}
             `;
@@ -219,9 +369,27 @@ sendMsgForm.addEventListener("submit", async (e) => {
         downloadUrl = await getDownloadURL(fileRef);
     }
 
-    await addDoc(collection(db, `groups/${activeGroupId}/messages`), {
-        senderId: loggedInUser.uid, senderEmail: loggedInUser.email || "Guest_User", text: textInput.value, fileUrl: downloadUrl, timestamp: serverTimestamp()
-    });
+    const nameRef = document.getElementById("user-display-name").innerText;
+
+    if (chatType === "direct") {
+        await addDoc(collection(db, `directMessages/${activeGroupId}/messages`), {
+            senderId: loggedInUser.uid,
+            senderName: nameRef,
+            text: textInput.value,
+            fileUrl: downloadUrl,
+            timestamp: serverTimestamp()
+        });
+    } else {
+        await addDoc(collection(db, `groups/${activeGroupId}/messages`), {
+            senderId: loggedInUser.uid,
+            senderEmail: loggedInUser.email || "Guest_User",
+            senderName: nameRef,
+            text: textInput.value,
+            fileUrl: downloadUrl,
+            timestamp: serverTimestamp()
+        });
+    }
+    
     textInput.value = ""; fileInput.value = "";
 });
 
