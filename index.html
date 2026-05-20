@@ -3,28 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MWAMINI CHATTING SITE - Auth</title>
+    <title>MWAMINI CHATTING SITE - Secure Gateway</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="auth-body">
     <div class="auth-container">
         <h2>MWAMINI CHATTING SITE</h2>
+        
         <div id="auth-box">
-            <h3 id="auth-title">Login</h3>
+            <h3 id="auth-title">Secure Login</h3>
+            
             <form id="auth-form">
                 <input type="email" id="email" placeholder="Enter Email Address" required>
                 <input type="password" id="password" placeholder="Enter Password" required>
-                <button type="submit" id="submit-btn">Login</button>
+                <button type="submit" id="submit-btn">Sign In with Email</button>
             </form>
+            
             <p id="toggle-auth">Don't have an account? <span id="toggle-link">Register here</span></p>
+            
+            <div class="auth-divider">OR</div>
+
+            <div class="provider-buttons-grid">
+                <button type="button" id="google-login-btn" class="provider-btn google">🌐 Continue with Google</button>
+                <button type="button" id="phone-setup-btn" class="provider-btn phone">📱 Use Phone Number</button>
+                <button type="button" id="guest-login-btn" class="provider-btn guest">👤 Enter as Guest User</button>
+            </div>
         </div>
+
+        <div id="phone-modal" class="modal hidden">
+            <div class="modal-content" style="background: white; color: #333; text-align: left; max-width: 350px;">
+                <span class="close-modal" id="close-phone-modal-btn">&times;</span>
+                <h3 style="color: #008069; margin-bottom: 12px;">Phone Authentication</h3>
+                
+                <div id="phone-step-a">
+                    <input type="text" id="phone-number-input" placeholder="+250 788 000 000" style="width:100%; padding:10px; margin-bottom:10px;">
+                    <div id="recaptcha-container"></div> <button type="button" id="send-otp-btn" style="width:100%; padding:10px; background:#00a884; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Send Verification Code</button>
+                </div>
+
+                <div id="phone-step-b" class="hidden">
+                    <p style="font-size:12px; margin-bottom:8px; color:#555;">Enter the 6-digit verification code sent to your phone:</p>
+                    <input type="text" id="otp-code-input" placeholder="123456" style="width:100%; padding:10px; margin-bottom:10px; letter-spacing: 4px; text-align: center;">
+                    <button type="button" id="verify-otp-btn" style="width:100%; padding:10px; background:#4f46e5; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Verify & Dashboard Access</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script type="importmap">
       {
         "imports": {
           "firebase/app": "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js",
-          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js"
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js"
         }
       }
     </script>
