@@ -22,6 +22,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 let loggedInUser = null;
+let userProfileData = null; // Holds user database record object
 let activeGroupId = null;
 let activeGroupData = null;
 let chatType = "group"; 
@@ -45,8 +46,29 @@ const tabUsers = document.getElementById("tab-users");
 const groupSection = document.getElementById("sidebar-groups-section");
 const userSection = document.getElementById("sidebar-users-section");
 const searchUsersInput = document.getElementById("search-users-input");
+const wallpaperPicker = document.getElementById("chat-wallpaper-picker");
 
-// TAB BAR ENGINE CONTROLLER
+// 🎨 NON-DESTRUCTIVE WALLPAPER PICKER CONFIGURATION ENGINE
+const wallpaperStyles = {
+    default: "#efeae2",
+    mint: "#d8efdf",
+    dark: "#1e293b",
+    lavender: "#f3e8ff",
+    sunset: "#ffedd5"
+};
+
+wallpaperPicker.addEventListener("change", () => {
+    const chosenTheme = wallpaperPicker.value;
+    messagesDisplay.style.backgroundColor = wallpaperStyles[chosenTheme];
+    
+    // Aesthetic adjustment context for text readability inside dark theme choice
+    if (chosenTheme === 'dark') {
+        messagesDisplay.style.color = "#ffffff";
+    } else {
+        messagesDisplay.style.color = "#000000";
+    }
+});
+
 tabGroups.addEventListener("click", () => {
     tabGroups.style.background = "#e5e7eb"; tabGroups.style.borderBottom = "3px solid #00a884";
     tabUsers.style.background = "#f0f2f5"; tabUsers.style.borderBottom = "3px solid transparent";
@@ -57,7 +79,7 @@ tabUsers.addEventListener("click", () => {
     tabUsers.style.background = "#e5e7eb"; tabUsers.style.borderBottom = "3px solid #00a884";
     tabGroups.style.background = "#f0f2f5"; tabGroups.style.borderBottom = "3px solid transparent";
     userSection.classList.remove("hidden"); groupSection.classList.add("hidden");
-    loadUserDirectory();
+    renderUsersList([]); // Keep empty until full search match query execution
 });
 
 function setupPresenceSystem(user) {
@@ -74,6 +96,13 @@ onAuthStateChanged(auth, async (user) => {
     else {
         loggedInUser = user;
         const userDoc = await getDoc(doc(db, "users", user.uid));
+        
+        if (userDoc.exists()) {
+            userProfileData = userDoc.data();
+        } else {
+            userProfileData = { role: "guest", email: "Guest_User" };
+        }
+
         let displayHandle = user.email ? user.email.split('@')[0] : "Online Guest User";
         if (userDoc.exists() && userDoc.data().username) {
             displayHandle = userDoc.data().username;
@@ -103,7 +132,8 @@ document.getElementById("save-username-btn").addEventListener("click", async () 
     document.getElementById("user-display-name").innerText = usernameVal;
     document.getElementById("username-modal").classList.add("hidden");
     alert("Username configured successfully!");
-    loadUserDirectory();
+    searchUsersInput.value = "";
+    renderUsersList([]);
 });
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -111,22 +141,30 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
     signOut(auth);
 });
 
-// DIRECT SINGLE CHAT ACTIVE USER LISTENER ENGINE
-function loadUserDirectory() {
-    const q = query(collection(db, "users"));
-    onSnapshot(q, (snapshot) => {
-        renderUsersList(snapshot.docs);
-    });
-}
-
+// 🔒 PRIVACY-LOCKED DISCOVERY ENGINE WITH GUEST ENVIRONMENT ISOLATION
 searchUsersInput.addEventListener("input", () => {
-    const filterText = searchUsersInput.value.trim().toLowerCase();
+    const searchVal = searchUsersInput.value.trim().toLowerCase();
+    
+    if (!searchVal) {
+        renderUsersList([]);
+        return;
+    }
+
     const q = query(collection(db, "users"));
     getDocs(q).then((snapshot) => {
         const filteredDocs = snapshot.docs.filter(docSnap => {
             const data = docSnap.data();
-            const targetName = data.username ? data.username.toLowerCase() : (data.email ? data.email.toLowerCase() : "");
-            return targetName.includes(filterText);
+            
+            // 🛑 CRITICAL ISOLATION RULE: Guests can ONLY see and query other Guests.
+            if (userProfileData.role === "guest" && data.role !== "guest") return false;
+            // Registered account tier profiles ignore guest rows entirely
+            if (userProfileData.role !== "guest" && data.role === "guest") return false;
+
+            const targetName = data.username ? data.username.toLowerCase() : "";
+            const targetEmail = data.email ? data.email.toLowerCase() : "";
+
+            // User list stays hidden unless searchVal strictly matches complete full string pattern exactly
+            return (targetName === searchVal || targetEmail === searchVal);
         });
         renderUsersList(filteredDocs);
     });
@@ -146,7 +184,7 @@ function renderUsersList(docsList) {
 
         const userRow = document.createElement("div");
         userRow.className = `group-item ${activeGroupId === userItem.uid ? 'active' : ''}`;
-        userRow.style = "padding:12px; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; cursor:pointer;";
+        userRow.style = "padding:12px; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background: white; border-radius: 6px; margin-bottom: 5px;";
         userRow.innerHTML = `
             <div>
                 <h4 style="margin:0; font-size:14px; color:#111827;">${resolvedName}</h4>
@@ -154,15 +192,15 @@ function renderUsersList(docsList) {
                     ${isOnline ? '● Active Now' : '● Offline'}
                 </span>
             </div>
-            <button style="background:#00a884; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:11px;">Text</button>
+            <button style="background:#00a884; color:white; border:none; padding:5px 10px; border-radius:4px; font-size:11px; font-weight: bold; cursor: pointer;">Text</button>
         `;
 
         userRow.addEventListener("click", () => startDirectMessaging(userItem.uid, resolvedName));
         usersContainer.appendChild(userRow);
     });
 
-    if (matchCounter === 0) {
-        usersContainer.innerHTML = "<p style='padding:10px; color:#888; font-size:12px;'>No matching users found.</p>";
+    if (matchCounter === 0 && searchUsersInput.value.trim().length > 0) {
+        usersContainer.innerHTML = "<p style='padding:10px; color:#ef4444; font-size:12px; font-weight: 500; text-align: center;'>No exact secure user verified under this signature/environment.</p>";
     }
 }
 
@@ -178,6 +216,10 @@ function startDirectMessaging(targetUid, targetName) {
     activeGroupTitle.innerText = `💬 ${targetName}`;
     groupRoleIndicator.innerText = "Secured End-to-End Direct Chat Workspace";
     creatorAdminPanel.classList.add("hidden"); 
+
+    // Reset default wallpaper styling cleanly upon entry
+    wallpaperPicker.value = "default";
+    messagesDisplay.style.backgroundColor = wallpaperStyles.default;
 
     openPrivateStream(activeGroupId);
 }
@@ -285,6 +327,7 @@ function renderJoinRequestScreen(groupId, groupData) {
     });
 }
 
+// 👑 GROUP CHAT LOGIC OPENER
 function openChatRoom(groupId, groupName) {
     const reqScreen = document.getElementById("request-screen");
     if (reqScreen) reqScreen.remove();
@@ -296,6 +339,9 @@ function openChatRoom(groupId, groupName) {
 
     if (isCreator) { creatorAdminPanel.classList.remove("hidden"); listenToJoinRequests(groupId); } 
     else { creatorAdminPanel.classList.add("hidden"); }
+
+    wallpaperPicker.value = "default";
+    messagesDisplay.style.backgroundColor = wallpaperStyles.default;
 
     if (messagesUnsubscribe) messagesUnsubscribe();
     const q = query(collection(db, `groups/${groupId}/messages`), orderBy("timestamp", "asc"));
@@ -389,25 +435,62 @@ document.getElementById("submit-text-status-btn").addEventListener("click", asyn
 
     const now = new Date(); const expireTime = new Date(); expireTime.setHours(now.getHours() + 48);
     await addDoc(collection(db, "statuses"), {
-        uploaderEmail: loggedInUser.email || "Guest_User", statusText: txtArea.value.trim(), createdAt: Timestamp.fromDate(now), expiresAt: Timestamp.fromDate(expireTime)
+        ownerUid: loggedInUser.uid,
+        uploaderEmail: loggedInUser.email || "Guest_User", 
+        statusText: txtArea.value.trim(), 
+        createdAt: Timestamp.fromDate(now), 
+        expiresAt: Timestamp.fromDate(expireTime)
     });
     alert("MWAMINI Status posted for 48 hours!");
     txtArea.value = ""; document.getElementById("status-creator-modal").classList.add("hidden");
 });
 
+// 🗑️ REAL-TIME MWAMINI STATUS LISTENER + SELF-DELETION SUPPORT
 function listenToMwaminiStatuses() {
     const q = query(collection(db, "statuses"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
         const grid = document.getElementById("status-viewer-grid"); grid.innerHTML = "";
         const currentTime = new Date().getTime();
+        let statusCount = 0;
+
         snapshot.docs.forEach(docSnap => {
             const status = docSnap.data();
+            const statusId = docSnap.id;
+            
             if (status.expiresAt && status.expiresAt.toDate().getTime() > currentTime) {
-                const card = document.createElement("div"); card.className = "status-card";
-                card.style = "background:#333; padding:15px; border-radius:6px; min-width:180px; color:white; margin-right:10px;";
-                card.innerHTML = `<p style="color:#4ade80;">@${status.uploaderEmail.split('@')[0]}</p><div style="background:#444; padding:10px; font-style:italic;">"${status.statusText}"</div>`;
+                statusCount++;
+                const card = document.createElement("div"); 
+                card.className = "status-card";
+                card.style = "background:#2d3748; padding:15px; border-radius:10px; min-width:200px; color:white; position:relative; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+                
+                // Show a delete action if the status belongs to the logged-in account
+                const deleteActionBtn = (status.ownerUid === loggedInUser.uid) 
+                    ? `<button class="remove-status-btn" data-id="${statusId}" style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:2px 6px; font-size:10px; cursor:pointer; font-weight:bold;">Delete</button>` 
+                    : '';
+
+                card.innerHTML = `
+                    <p style="color:#4ade80; margin:0 0 8px 0; font-size:13px; font-weight:bold;">@${status.uploaderEmail.split('@')[0]}</p>
+                    <div style="background:#1a202c; padding:10px; font-style:italic; border-radius:6px; font-size:13px; min-height:40px;">"${status.statusText}"</div>
+                    ${deleteActionBtn}
+                `;
                 grid.appendChild(card);
             }
+        });
+
+        if(statusCount === 0) {
+            grid.innerHTML = "<p style='color:#666; font-size:13px;'>No active updates present over the last 48 hours.</p>";
+        }
+
+        // Attach self-deletion events securely
+        document.querySelectorAll(".remove-status-btn").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                e.stopPropagation();
+                const targetId = btn.getAttribute("data-id");
+                if (confirm("Remove your status post right now?")) {
+                    await deleteDoc(doc(db, "statuses", targetId));
+                    alert("Status deleted successfully.");
+                }
+            });
         });
     });
 }
