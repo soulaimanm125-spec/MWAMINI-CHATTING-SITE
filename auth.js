@@ -2,7 +2,13 @@ import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 
 const firebaseConfig = {
-  // PASTE_YOUR_FIREBASE_CONFIGURATION_OBJECT_HERE
+  apiKey: "AIzaSyA_ZO0DokMWmXWHYa0GJozOYmsKwJLFX_0",
+  authDomain: "mwamini-chat-site.firebaseapp.com",
+  projectId: "mwamini-chat-site",
+  storageBucket: "mwamini-chat-site.firebasestorage.app",
+  messagingSenderId: "403012103548",
+  appId: "1:403012103548:web:d86e99a4723dbdc1fd88f9",
+  measurementId: "G-M6YZ1H0R3H"
 };
 
 const app = initializeApp(firebaseConfig);
