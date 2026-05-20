@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MWAMINI CHATTING SITE - Secure Dashboard</title>
+    <title>MWAMINI CHATTING SITE - Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,9 +12,12 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h3>MWAMINI CHATTING SITE</h3>
-                <div class="user-profile-tag">
-                    <span id="user-display-name">Loading...</span> 
-                    <span id="presence-badge" class="badge offline">●</span>
+                <div class="user-profile-tag" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <div>
+                        <span id="user-display-name">Loading...</span> 
+                        <span id="presence-badge" class="badge offline">●</span>
+                    </div>
+                    <button id="edit-username-btn" style="background: transparent; border: none; cursor: pointer; font-size: 14px;">✏️</button>
                 </div>
                 <div class="header-actions">
                     <button id="view-status-btn">🟢 MWAMINI Statuses</button>
@@ -23,25 +26,39 @@
                 </div>
             </div>
 
-            <form id="create-group-form">
-                <input type="text" id="new-group-name" placeholder="Create high-secure group..." required>
-                <button type="submit">Create</button>
-            </form>
+            <div class="sidebar-tabs" style="display: flex; border-bottom: 1px solid #e5e7eb;">
+                <button id="tab-groups" class="tab-btn active" style="flex: 1; padding: 10px; background: #f0f2f5; border: none; cursor: pointer; font-weight: bold; border-bottom: 2px solid #00a884;">Groups</button>
+                <button id="tab-users" class="tab-btn" style="flex: 1; padding: 10px; background: #fff; border: none; cursor: pointer; font-weight: bold; border-bottom: 2px solid transparent;">Find Users</button>
+            </div>
 
-            <div class="groups-list" id="groups-container"></div>
+            <div id="sidebar-groups-section">
+                <form id="create-group-form">
+                    <input type="text" id="new-group-name" placeholder="Create high-secure group..." required>
+                    <button type="submit">Create</button>
+                </form>
+                <div class="groups-list" id="groups-container"></div>
+            </div>
+
+            <div id="sidebar-users-section" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+                <div style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
+                    <input type="text" id="search-users-input" placeholder="Search users by username..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
+                </div>
+                <div class="users-list" id="users-container" style="flex: 1; overflow-y: auto;">
+                    </div>
+            </div>
         </div>
 
         <div class="chat-area" id="chat-area-fallback">
             <div class="no-chat-message">
                 <h2>Welcome to MWAMINI CHATTING SITE</h2>
-                <p>Pick a group to request access, or manage your creations.</p>
+                <p>Pick a group or select a user from the directory to start chatting.</p>
             </div>
         </div>
 
         <div class="chat-area hidden" id="chat-area-active">
             <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h3 id="active-group-title">Group Name</h3>
+                    <h3 id="active-group-title">Group/User Name</h3>
                     <p id="group-role-indicator" style="font-size: 11px; color: #6b7280;"></p>
                 </div>
                 <div id="creator-admin-panel" class="hidden">
@@ -60,6 +77,15 @@
             </form>
         </div>
 
+    </div>
+
+    <div id="username-modal" class="modal hidden">
+        <div class="modal-content" style="background: white; color: #333; text-align: left; max-width: 350px;">
+            <span class="close-modal" id="close-username-modal-btn">&times;</span>
+            <h3 style="color: #008069; margin-bottom: 12px;">Set Your Handle</h3>
+            <input type="text" id="custom-username-input" placeholder="Enter custom username..." style="width:100%; padding:10px; margin-bottom:15px; border: 1px solid #ccc; border-radius: 4px;">
+            <button id="save-username-btn" style="width:100%; padding:10px; background:#00a884; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Save Username</button>
+        </div>
     </div>
 
     <div id="requests-modal" class="modal hidden">
