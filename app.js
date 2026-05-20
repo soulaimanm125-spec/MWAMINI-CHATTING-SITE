@@ -22,7 +22,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 
 let loggedInUser = null;
-let userProfileData = null; // Holds user database record object
+let userProfileData = null; 
 let activeGroupId = null;
 let activeGroupData = null;
 let chatType = "group"; 
@@ -48,7 +48,6 @@ const userSection = document.getElementById("sidebar-users-section");
 const searchUsersInput = document.getElementById("search-users-input");
 const wallpaperPicker = document.getElementById("chat-wallpaper-picker");
 
-// 🎨 NON-DESTRUCTIVE WALLPAPER PICKER CONFIGURATION ENGINE
 const wallpaperStyles = {
     default: "#efeae2",
     mint: "#d8efdf",
@@ -60,8 +59,6 @@ const wallpaperStyles = {
 wallpaperPicker.addEventListener("change", () => {
     const chosenTheme = wallpaperPicker.value;
     messagesDisplay.style.backgroundColor = wallpaperStyles[chosenTheme];
-    
-    // Aesthetic adjustment context for text readability inside dark theme choice
     if (chosenTheme === 'dark') {
         messagesDisplay.style.color = "#ffffff";
     } else {
@@ -79,7 +76,7 @@ tabUsers.addEventListener("click", () => {
     tabUsers.style.background = "#e5e7eb"; tabUsers.style.borderBottom = "3px solid #00a884";
     tabGroups.style.background = "#f0f2f5"; tabGroups.style.borderBottom = "3px solid transparent";
     userSection.classList.remove("hidden"); groupSection.classList.add("hidden");
-    renderUsersList([]); // Keep empty until full search match query execution
+    renderUsersList([]); 
 });
 
 function setupPresenceSystem(user) {
@@ -141,7 +138,6 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
     signOut(auth);
 });
 
-// 🔒 PRIVACY-LOCKED DISCOVERY ENGINE WITH GUEST ENVIRONMENT ISOLATION
 searchUsersInput.addEventListener("input", () => {
     const searchVal = searchUsersInput.value.trim().toLowerCase();
     
@@ -154,16 +150,11 @@ searchUsersInput.addEventListener("input", () => {
     getDocs(q).then((snapshot) => {
         const filteredDocs = snapshot.docs.filter(docSnap => {
             const data = docSnap.data();
-            
-            // 🛑 CRITICAL ISOLATION RULE: Guests can ONLY see and query other Guests.
             if (userProfileData.role === "guest" && data.role !== "guest") return false;
-            // Registered account tier profiles ignore guest rows entirely
             if (userProfileData.role !== "guest" && data.role === "guest") return false;
 
             const targetName = data.username ? data.username.toLowerCase() : "";
             const targetEmail = data.email ? data.email.toLowerCase() : "";
-
-            // User list stays hidden unless searchVal strictly matches complete full string pattern exactly
             return (targetName === searchVal || targetEmail === searchVal);
         });
         renderUsersList(filteredDocs);
@@ -217,7 +208,6 @@ function startDirectMessaging(targetUid, targetName) {
     groupRoleIndicator.innerText = "Secured End-to-End Direct Chat Workspace";
     creatorAdminPanel.classList.add("hidden"); 
 
-    // Reset default wallpaper styling cleanly upon entry
     wallpaperPicker.value = "default";
     messagesDisplay.style.backgroundColor = wallpaperStyles.default;
 
@@ -327,7 +317,6 @@ function renderJoinRequestScreen(groupId, groupData) {
     });
 }
 
-// 👑 GROUP CHAT LOGIC OPENER
 function openChatRoom(groupId, groupName) {
     const reqScreen = document.getElementById("request-screen");
     if (reqScreen) reqScreen.remove();
@@ -445,7 +434,7 @@ document.getElementById("submit-text-status-btn").addEventListener("click", asyn
     txtArea.value = ""; document.getElementById("status-creator-modal").classList.add("hidden");
 });
 
-// 🗑️ REAL-TIME MWAMINI STATUS LISTENER + SELF-DELETION SUPPORT
+// 🔒 STRICT 48-HOUR SELF-OWNER STATUS DELETION CONTROLLER
 function listenToMwaminiStatuses() {
     const q = query(collection(db, "statuses"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -457,15 +446,18 @@ function listenToMwaminiStatuses() {
             const status = docSnap.data();
             const statusId = docSnap.id;
             
-            if (status.expiresAt && status.expiresAt.toDate().getTime() > currentTime) {
+            const expiresTimeMs = status.expiresAt ? status.expiresAt.toDate().getTime() : 0;
+            
+            // Validate if status is strictly within its 48 hours lifespan window
+            if (expiresTimeMs > currentTime) {
                 statusCount++;
                 const card = document.createElement("div"); 
                 card.className = "status-card";
                 card.style = "background:#2d3748; padding:15px; border-radius:10px; min-width:200px; color:white; position:relative; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
                 
-                // Show a delete action if the status belongs to the logged-in account
+                // Show the delete button ONLY if the status belongs to the current user AND hasn't expired yet
                 const deleteActionBtn = (status.ownerUid === loggedInUser.uid) 
-                    ? `<button class="remove-status-btn" data-id="${statusId}" style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:2px 6px; font-size:10px; cursor:pointer; font-weight:bold;">Delete</button>` 
+                    ? `<button class="remove-status-btn" data-id="${statusId}" data-expires="${expiresTimeMs}" style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:2px 6px; font-size:10px; cursor:pointer; font-weight:bold;">Delete</button>` 
                     : '';
 
                 card.innerHTML = `
@@ -481,11 +473,19 @@ function listenToMwaminiStatuses() {
             grid.innerHTML = "<p style='color:#666; font-size:13px;'>No active updates present over the last 48 hours.</p>";
         }
 
-        // Attach self-deletion events securely
         document.querySelectorAll(".remove-status-btn").forEach(btn => {
             btn.addEventListener("click", async (e) => {
                 e.stopPropagation();
                 const targetId = btn.getAttribute("data-id");
+                const expirationMs = parseInt(btn.getAttribute("data-expires"), 10);
+                const clickTimeMs = new Date().getTime();
+
+                // Double check both owner verification and 48-hour timestamp restriction criteria
+                if (clickTimeMs > expirationMs) {
+                    alert("⚠️ This status has passed its 48-hour active timeline and cannot be manually modified.");
+                    return;
+                }
+
                 if (confirm("Remove your status post right now?")) {
                     await deleteDoc(doc(db, "statuses", targetId));
                     alert("Status deleted successfully.");
