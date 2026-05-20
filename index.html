@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MWAMINI CHATTING SITE - Auth</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+    <div class="auth-container">
+        <h2>MWAMINI CHATTING SITE</h2>
+        <div id="auth-box">
+            <h3 id="auth-title">Login</h3>
+            <form id="auth-form">
+                <input type="email" id="email" placeholder="Enter Email Address" required>
+                <input type="password" id="password" placeholder="Enter Password" required>
+                <button type="submit" id="submit-btn">Login</button>
+            </form>
+            <p id="toggle-auth">Don't have an account? <span id="toggle-link">Register here</span></p>
+        </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js"
+        }
+      }
+    </script>
+    <script type="module" src="auth.js"></script>
+</body>
+</html>
