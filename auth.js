@@ -1,5 +1,13 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signInAnonymously,
+    sendEmailVerification,
+    onAuthStateChanged 
+} from "firebase/auth";
+import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA_ZO0DokMWmXWHYa0GJozOYmsKwJLFX_0",
@@ -13,6 +21,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 const authForm = document.getElementById("auth-form");
 const emailInput = document.getElementById("email");
@@ -23,17 +32,23 @@ const toggleLink = document.getElementById("toggle-link");
 
 let isLoginMode = true;
 
-// Toggle state between user Registration and Logging In
+// Inject options box dynamically for Guest/Anonymous entries
+const authBox = document.getElementById("auth-box");
+const guestDivider = document.createElement("div");
+guestDivider.innerHTML = `
+    <div style="margin: 15px 0; color: #aaa; font-size: 12px;">OR</div>
+    <button type="button" id="guest-login-btn" style="width: 100%; padding: 12px; background: #6b7280; color: white; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">Enter as Guest User</button>
+`;
+authBox.appendChild(guestDivider);
+
+// Toggle Login / Register UI state
 toggleLink.addEventListener("click", () => {
     isLoginMode = !isLoginMode;
-    authTitle.innerText = isLoginMode ? "Login" : "Register";
-    submitBtn.innerText = isLoginMode ? "Login" : "Register";
-    document.getElementById("toggle-auth").innerHTML = isLoginMode ? 
-        `Don't have an account? <span id="toggle-link" style="color:#00a884; font-weight:bold; cursor:pointer;">Register here</span>` : 
-        `Already have an account? <span id="toggle-link" style="color:#00a884; font-weight:bold; cursor:pointer;">Login here</span>`;
+    authTitle.innerText = isLoginMode ? "Login" : "Register Secure Account";
+    submitBtn.innerText = isLoginMode ? "Login" : "Register & Send Verification Link";
 });
 
-// Form Submission Actions
+// Primary Email Authentication Action Pipeline
 authForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = emailInput.value.trim();
@@ -41,21 +56,46 @@ authForm.addEventListener("submit", async (e) => {
 
     try {
         if (isLoginMode) {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            if (!user.emailVerified) {
+                alert("🔴 Access Blocked: Your email address is not verified yet. Check your inbox for the verification link!");
+                return;
+            }
+            await registerUserInFirestore(user, "registered");
             window.location.href = "dashboard.html";
         } else {
-            await createUserWithEmailAndPassword(auth, email, password);
-            alert("Registration successful! Proceeding to Dashboard.");
-            window.location.href = "dashboard.html";
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await sendEmailVerification(userCredential.user);
+            alert("🟢 Security Verification Sent! Please check your email inbox and click the verification link before logging in.");
+            isLoginMode = true;
+            authTitle.innerText = "Login";
+            submitBtn.innerText = "Login";
         }
     } catch (error) {
-        alert("Authentication Error: " + error.message);
+        alert("Secure Auth Failure: " + error.message);
     }
 });
 
-// Check if a user is already signed in
-onAuthStateChanged(auth, (user) => {
-    if (user && window.location.pathname.endsWith("index.html")) {
+// Secure Guest Sign In Action
+document.getElementById("guest-login-btn").addEventListener("click", async () => {
+    try {
+        const userCredential = await signInAnonymously(auth);
+        await registerUserInFirestore(userCredential.user, "guest");
         window.location.href = "dashboard.html";
+    } catch (error) {
+        alert("Guest entry system locked: " + error.message);
     }
 });
+
+// Base Profile Document Setup
+async_function registerUserInFirestore(user, role) {
+    await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email || "Guest_Online_User",
+        role: role,
+        status: "online",
+        lastActive: serverTimestamp()
+    }, { merge: true });
+}
