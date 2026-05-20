@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MWAMINI CHATTING SITE - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>MWAMINI CHATTING SITE</h3>
+                <div class="header-actions">
+                    <button id="view-status-btn">🟢 View Statuses</button>
+                    <label class="status-upload-lbl">
+                        ➕ Post Status
+                        <input type="file" id="status-file-input" accept="image/*" style="display:none;">
+                    </label>
+                    <button id="logout-btn">Sign Out</button>
+                </div>
+            </div>
+
+            <form id="create-group-form">
+                <input type="text" id="new-group-name" placeholder="Type new group name..." required>
+                <button type="submit">Create</button>
+            </form>
+
+            <div class="groups-list" id="groups-container">
+                </div>
+        </div>
+
+        <div class="chat-area" id="chat-area-fallback">
+            <div class="no-chat-message">
+                <h2>Welcome to MWAMINI CHATTING SITE</h2>
+                <p>Pick a group on the side panel or build a new one to begin chatting.</p>
+            </div>
+        </div>
+
+        <div class="chat-area hidden" id="chat-area-active">
+            <div class="chat-header">
+                <h3 id="active-group-title">Group Name</h3>
+            </div>
+            
+            <div class="messages-container" id="messages-display">
+                </div>
+
+            <form id="send-message-form">
+                <input type="file" id="message-file-input">
+                <input type="text" id="message-text-input" placeholder="Write a message..." autocomplete="off">
+                <button type="submit">Send</button>
+            </form>
+        </div>
+
+    </div>
+
+    <div id="status-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal" id="close-modal-btn">&times;</span>
+            <h2>Active MWAMINI Status Updates</h2>
+            <p class="subtitle">Disappears automatically after 48 Hours</p>
+            <div class="status-grid" id="status-viewer-grid"></div>
+        </div>
+    </div>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.1/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js",
+          "firebase/storage": "https://www.gstatic.com/firebasejs/10.12.1/firebase-storage.js"
+        }
+      }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
