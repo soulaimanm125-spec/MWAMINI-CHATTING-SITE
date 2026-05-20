@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MWAMINI CHATTING SITE - Dashboard</title>
+    <title>MWAMINI CHATTING SITE - Secure Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -26,39 +26,36 @@
                 </div>
             </div>
 
-            <div class="sidebar-tabs" style="display: flex; border-bottom: 1px solid #e5e7eb;">
-                <button id="tab-groups" class="tab-btn active" style="flex: 1; padding: 10px; background: #f0f2f5; border: none; cursor: pointer; font-weight: bold; border-bottom: 2px solid #00a884;">Groups</button>
-                <button id="tab-users" class="tab-btn" style="flex: 1; padding: 10px; background: #fff; border: none; cursor: pointer; font-weight: bold; border-bottom: 2px solid transparent;">Find Users</button>
+            <div class="sidebar-tabs" style="display: flex; border-bottom: 1px solid #e5e7eb; background: #f0f2f5;">
+                <button id="tab-groups" style="flex: 1; padding: 12px; background: #e5e7eb; border: none; cursor: pointer; font-weight: bold; border-bottom: 3px solid #00a884;">Groups</button>
+                <button id="tab-users" style="flex: 1; padding: 12px; background: #f0f2f5; border: none; cursor: pointer; font-weight: bold; border-bottom: 3px solid transparent;">Find Users</button>
             </div>
 
             <div id="sidebar-groups-section">
                 <form id="create-group-form">
-                    <input type="text" id="new-group-name" placeholder="Create high-secure group..." required>
+                    <input type="text" id="new-group-name" placeholder="Create new group name..." required>
                     <button type="submit">Create</button>
                 </form>
                 <div class="groups-list" id="groups-container"></div>
             </div>
 
-            <div id="sidebar-users-section" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
-                <div style="padding: 10px; border-bottom: 1px solid #f3f4f6;">
-                    <input type="text" id="search-users-input" placeholder="Search users by username..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                </div>
-                <div class="users-list" id="users-container" style="flex: 1; overflow-y: auto;">
-                    </div>
+            <div id="sidebar-users-section" class="hidden" style="padding: 10px;">
+                <input type="text" id="search-users-input" placeholder="Search users by username..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; margin-bottom: 10px;">
+                <div class="users-list" id="users-container"></div>
             </div>
         </div>
 
         <div class="chat-area" id="chat-area-fallback">
             <div class="no-chat-message">
                 <h2>Welcome to MWAMINI CHATTING SITE</h2>
-                <p>Pick a group or select a user from the directory to start chatting.</p>
+                <p>Pick a group on the side panel or build a new one to begin chatting.</p>
             </div>
         </div>
 
         <div class="chat-area hidden" id="chat-area-active">
             <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h3 id="active-group-title">Group/User Name</h3>
+                    <h3 id="active-group-title">Group Name</h3>
                     <p id="group-role-indicator" style="font-size: 11px; color: #6b7280;"></p>
                 </div>
                 <div id="creator-admin-panel" class="hidden">
