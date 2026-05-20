@@ -8,12 +8,13 @@ import {
 import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyA_ZO0DokMWmXWHYa0GJozOYmsKwJLFX_0",
+  authDomain: "mwamini-chat-site.firebaseapp.com",
+  projectId: "mwamini-chat-site",
+  storageBucket: "mwamini-chat-site.firebasestorage.app",
+  messagingSenderId: "403012103548",
+  appId: "1:403012103548:web:d86e99a4723dbdc1fd88f9",
+  measurementId: "G-M6YZ1H0R3H"
 };
 
 const app = initializeApp(firebaseConfig);
