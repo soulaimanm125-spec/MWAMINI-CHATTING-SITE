@@ -110,7 +110,7 @@ onAuthStateChanged(auth, async (user) => {
         loadChatGroups();
         listenToMwaminiStatuses();
         
-        // ADDED: Triggers the new Admin Board invisibly 
+        // Triggers the updated Admin Announcement system securely
         loadGlobalAnnouncements(user); 
     }
 });
@@ -437,7 +437,6 @@ document.getElementById("submit-text-status-btn").addEventListener("click", asyn
     txtArea.value = ""; document.getElementById("status-creator-modal").classList.add("hidden");
 });
 
-// 🔒 STRICT 48-HOUR SELF-OWNER STATUS DELETION CONTROLLER
 function listenToMwaminiStatuses() {
     const q = query(collection(db, "statuses"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -451,14 +450,12 @@ function listenToMwaminiStatuses() {
             
             const expiresTimeMs = status.expiresAt ? status.expiresAt.toDate().getTime() : 0;
             
-            // Validate if status is strictly within its 48 hours lifespan window
             if (expiresTimeMs > currentTime) {
                 statusCount++;
                 const card = document.createElement("div"); 
                 card.className = "status-card";
                 card.style = "background:#2d3748; padding:15px; border-radius:10px; min-width:200px; color:white; position:relative; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
                 
-                // Show the delete button ONLY if the status belongs to the current user AND hasn't expired yet
                 const deleteActionBtn = (status.ownerUid === loggedInUser.uid) 
                     ? `<button class="remove-status-btn" data-id="${statusId}" data-expires="${expiresTimeMs}" style="position:absolute; top:8px; right:8px; background:#ef4444; color:white; border:none; border-radius:4px; padding:2px 6px; font-size:10px; cursor:pointer; font-weight:bold;">Delete</button>` 
                     : '';
@@ -483,7 +480,6 @@ function listenToMwaminiStatuses() {
                 const expirationMs = parseInt(btn.getAttribute("data-expires"), 10);
                 const clickTimeMs = new Date().getTime();
 
-                // Double check both owner verification and 48-hour timestamp restriction criteria
                 if (clickTimeMs > expirationMs) {
                     alert("⚠️ This status has passed its 48-hour active timeline and cannot be manually modified.");
                     return;
@@ -507,30 +503,42 @@ document.getElementById("close-requests-modal-btn").addEventListener("click", ()
 
 
 // ========================================================= //
-//       --- MWAMINI ADMIN ANNOUNCEMENT SYSTEM ---           //
+//       --- MWAMINI ADMIN ANNOUNCEMENT SYSTEM ---          //
 // ========================================================= //
 
-const ADMIN_UID = "EloNNvt4xzUcKV1WeY0wGRLEBsu1"; // <--- PASTE YOUR UID HERE
+const ADMIN_UID = "EloNNvt4xzUcKV1WeY0wGRLEBsu1"; // Verified Admin UID string anchor
 
 async function postAdminAnnouncement() {
-    const postText = document.getElementById('admin-post-input').value;
+    const postInput = document.getElementById('admin-post-input');
+    const postText = postInput ? postInput.value : "";
     if (!postText.trim()) return;
+
+    // Strict Guard: block execution if unauthorized users attempt to force invocation
+    if (!loggedInUser || (loggedInUser.uid !== ADMIN_UID && (!userProfileData || userProfileData.role !== "admin"))) {
+        alert("Only the Admin can post here.");
+        return;
+    }
 
     try {
         await addDoc(collection(db, "adminAnnouncements"), {
-            text: postText,
+            text: postText.trim(),
             timestamp: serverTimestamp(),
             author: "Admin"
         });
-        document.getElementById('admin-post-input').value = ""; // clear input
+        if (postInput) postInput.value = ""; 
     } catch (error) {
         console.error("Error posting announcement: ", error);
         alert("Only the Admin can post here.");
     }
 }
-window.postAdminAnnouncement = postAdminAnnouncement; // Ensure HTML button can find this
+window.postAdminAnnouncement = postAdminAnnouncement;
 
 async function deleteAnnouncement(postId) {
+    if (!loggedInUser || (loggedInUser.uid !== ADMIN_UID && (!userProfileData || userProfileData.role !== "admin"))) {
+        alert("Permission denied.");
+        return;
+    }
+
     if(confirm("Are you sure you want to permanently delete this post?")) {
         try {
             await deleteDoc(doc(db, "adminAnnouncements", postId));
@@ -539,28 +547,28 @@ async function deleteAnnouncement(postId) {
         }
     }
 }
-window.deleteAnnouncement = deleteAnnouncement; // Ensure HTML button can find this
+window.deleteAnnouncement = deleteAnnouncement;
 
 function loadGlobalAnnouncements(currentUser) {
     const board = document.getElementById('announcement-board');
     const adminControls = document.getElementById('admin-post-controls');
     const list = document.getElementById('public-announcements-list');
 
-    // Make sure the elements actually exist in your HTML before trying to show them
     if(currentUser && board && adminControls && list) {
         board.style.display = "block";
         
-        // Unhide the secret controls ONLY if the logged-in user is the Admin
-        if(currentUser.uid === ADMIN_UID) {
+        // UPGRADED BI-LATERAL SECURITY CHECK: Looks up structural UID match and matching doc profiles
+        const isVerifiedAdmin = (currentUser.uid === ADMIN_UID || (userProfileData && userProfileData.role === "admin"));
+
+        if(isVerifiedAdmin) {
             adminControls.style.display = "block";
         } else {
             adminControls.style.display = "none";
         }
 
-        // Listen for new posts live using Firebase modular syntax
         const q = query(collection(db, "adminAnnouncements"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
-            list.innerHTML = ""; // Clear old list
+            list.innerHTML = ""; 
             if (snapshot.empty) {
                 list.innerHTML = "<i style='color: #666;'>No current announcements.</i>";
                 return;
@@ -573,8 +581,7 @@ function loadGlobalAnnouncements(currentUser) {
                 
                 let htmlContent = `<strong>Admin:</strong> ${post.text}`;
                 
-                // If YOU are looking at the screen, add a Delete button to the post
-                if(currentUser.uid === ADMIN_UID) {
+                if(isVerifiedAdmin) {
                     htmlContent += `<br><button onclick="deleteAnnouncement('${docSnap.id}')" style="background: transparent; color: red; border: none; font-size: 11px; cursor: pointer; margin-top: 4px; padding: 0;">Delete Post</button>`;
                 }
                 
