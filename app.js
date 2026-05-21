@@ -506,15 +506,31 @@ document.getElementById("close-requests-modal-btn").addEventListener("click", ()
 //       --- MWAMINI ADMIN ANNOUNCEMENT SYSTEM ---          //
 // ========================================================= //
 
-const ADMIN_UID = "EloNNvt4xzUcKV1WeY0wGRLEBsu1"; // Verified Admin UID string anchor
+const ADMIN_UID = "EloNNvt4xzUcKV1WeY0wGRLEBsu1"; // Your master Admin UID string
+
+// Security Helper: Verifies if the active user has administrative rights
+function checkIsAdmin(currentUser) {
+    if (!currentUser) return false;
+    
+    // Check 1: Strict UID hardcode check
+    const isMasterUid = currentUser.uid === ADMIN_UID;
+    
+    // Check 2: Database role validation (case-insensitive)
+    const hasAdminRole = userProfileData && (userProfileData.role === "admin" || userProfileData.role === "Admin");
+    
+    // Check 3: Check if the logged-in user's email belongs to Soulaiman
+    const isSoulaimanEmail = currentUser.email && currentUser.email.toLowerCase().startsWith("soulaiman");
+
+    return isMasterUid || hasAdminRole || isSoulaimanEmail;
+}
 
 async function postAdminAnnouncement() {
     const postInput = document.getElementById('admin-post-input');
     const postText = postInput ? postInput.value : "";
     if (!postText.trim()) return;
 
-    // Strict Guard: block execution if unauthorized users attempt to force invocation
-    if (!loggedInUser || (loggedInUser.uid !== ADMIN_UID && (!userProfileData || userProfileData.role !== "admin"))) {
+    // Direct security guard: Block execution if someone tries to bypass the UI
+    if (!checkIsAdmin(loggedInUser)) {
         alert("Only the Admin can post here.");
         return;
     }
@@ -534,7 +550,7 @@ async function postAdminAnnouncement() {
 window.postAdminAnnouncement = postAdminAnnouncement;
 
 async function deleteAnnouncement(postId) {
-    if (!loggedInUser || (loggedInUser.uid !== ADMIN_UID && (!userProfileData || userProfileData.role !== "admin"))) {
+    if (!checkIsAdmin(loggedInUser)) {
         alert("Permission denied.");
         return;
     }
@@ -555,34 +571,39 @@ function loadGlobalAnnouncements(currentUser) {
     const list = document.getElementById('public-announcements-list');
 
     if(currentUser && board && adminControls && list) {
+        // Show the announcement board feed container to everyone so they can read posts
         board.style.display = "block";
         
-        // UPGRADED BI-LATERAL SECURITY CHECK: Looks up structural UID match and matching doc profiles
-        const isVerifiedAdmin = (currentUser.uid === ADMIN_UID || (userProfileData && userProfileData.role === "admin"));
+        // Run the admin check
+        const isVerifiedAdmin = checkIsAdmin(currentUser);
 
         if(isVerifiedAdmin) {
+            // UNHIDE the input field and "Post to Everyone" button ONLY for you
             adminControls.style.display = "block";
         } else {
+            // FORCE HIDE the creation panel completely for regular users and guests
             adminControls.style.display = "none";
         }
 
+        // Live stream read-only announcements to the public list feed
         const q = query(collection(db, "adminAnnouncements"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             list.innerHTML = ""; 
             if (snapshot.empty) {
-                list.innerHTML = "<i style='color: #666;'>No current announcements.</i>";
+                list.innerHTML = "<i style='color: #666; font-size: 13px; display: block; padding: 5px;'>No current announcements.</i>";
                 return;
             }
 
             snapshot.forEach((docSnap) => {
                 const post = docSnap.data();
                 const postElement = document.createElement('div');
-                postElement.style.cssText = "margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);";
+                postElement.style.cssText = "margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); color: #000000;";
                 
                 let htmlContent = `<strong>Admin:</strong> ${post.text}`;
                 
+                // Only attach the delete action links if the active user is the admin
                 if(isVerifiedAdmin) {
-                    htmlContent += `<br><button onclick="deleteAnnouncement('${docSnap.id}')" style="background: transparent; color: red; border: none; font-size: 11px; cursor: pointer; margin-top: 4px; padding: 0;">Delete Post</button>`;
+                    htmlContent += `<br><button onclick="deleteAnnouncement('${docSnap.id}')" style="background: transparent; color: red; border: none; font-size: 11px; cursor: pointer; margin-top: 4px; padding: 0; font-weight: bold;">Delete Post</button>`;
                 }
                 
                 postElement.innerHTML = htmlContent;
