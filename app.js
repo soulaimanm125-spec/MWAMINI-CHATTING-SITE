@@ -109,6 +109,9 @@ onAuthStateChanged(auth, async (user) => {
         setupPresenceSystem(user);
         loadChatGroups();
         listenToMwaminiStatuses();
+        
+        // ADDED: Triggers the new Admin Board invisibly 
+        loadGlobalAnnouncements(user); 
     }
 });
 
@@ -501,3 +504,83 @@ document.getElementById("open-status-creator-btn").addEventListener("click", () 
 document.getElementById("close-status-creator-btn").addEventListener("click", () => document.getElementById("status-creator-modal").classList.add("hidden"));
 document.getElementById("view-requests-btn").addEventListener("click", () => document.getElementById("requests-modal").classList.remove("hidden"));
 document.getElementById("close-requests-modal-btn").addEventListener("click", () => document.getElementById("requests-modal").classList.add("hidden"));
+
+
+// ========================================================= //
+//       --- MWAMINI ADMIN ANNOUNCEMENT SYSTEM ---           //
+// ========================================================= //
+
+const ADMIN_UID = "EloNNvt4xzUcKV1WeY0wGRLEBsu1"; // <--- PASTE YOUR UID HERE
+
+async function postAdminAnnouncement() {
+    const postText = document.getElementById('admin-post-input').value;
+    if (!postText.trim()) return;
+
+    try {
+        await addDoc(collection(db, "adminAnnouncements"), {
+            text: postText,
+            timestamp: serverTimestamp(),
+            author: "Admin"
+        });
+        document.getElementById('admin-post-input').value = ""; // clear input
+    } catch (error) {
+        console.error("Error posting announcement: ", error);
+        alert("Only the Admin can post here.");
+    }
+}
+window.postAdminAnnouncement = postAdminAnnouncement; // Ensure HTML button can find this
+
+async function deleteAnnouncement(postId) {
+    if(confirm("Are you sure you want to permanently delete this post?")) {
+        try {
+            await deleteDoc(doc(db, "adminAnnouncements", postId));
+        } catch (error) {
+            console.error("Error deleting post: ", error);
+        }
+    }
+}
+window.deleteAnnouncement = deleteAnnouncement; // Ensure HTML button can find this
+
+function loadGlobalAnnouncements(currentUser) {
+    const board = document.getElementById('announcement-board');
+    const adminControls = document.getElementById('admin-post-controls');
+    const list = document.getElementById('public-announcements-list');
+
+    // Make sure the elements actually exist in your HTML before trying to show them
+    if(currentUser && board && adminControls && list) {
+        board.style.display = "block";
+        
+        // Unhide the secret controls ONLY if the logged-in user is the Admin
+        if(currentUser.uid === ADMIN_UID) {
+            adminControls.style.display = "block";
+        } else {
+            adminControls.style.display = "none";
+        }
+
+        // Listen for new posts live using Firebase modular syntax
+        const q = query(collection(db, "adminAnnouncements"), orderBy("timestamp", "desc"));
+        onSnapshot(q, (snapshot) => {
+            list.innerHTML = ""; // Clear old list
+            if (snapshot.empty) {
+                list.innerHTML = "<i style='color: #666;'>No current announcements.</i>";
+                return;
+            }
+
+            snapshot.forEach((docSnap) => {
+                const post = docSnap.data();
+                const postElement = document.createElement('div');
+                postElement.style.cssText = "margin-bottom: 10px; padding: 8px; background: white; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);";
+                
+                let htmlContent = `<strong>Admin:</strong> ${post.text}`;
+                
+                // If YOU are looking at the screen, add a Delete button to the post
+                if(currentUser.uid === ADMIN_UID) {
+                    htmlContent += `<br><button onclick="deleteAnnouncement('${docSnap.id}')" style="background: transparent; color: red; border: none; font-size: 11px; cursor: pointer; margin-top: 4px; padding: 0;">Delete Post</button>`;
+                }
+                
+                postElement.innerHTML = htmlContent;
+                list.appendChild(postElement);
+            });
+        });
+    }
+}
