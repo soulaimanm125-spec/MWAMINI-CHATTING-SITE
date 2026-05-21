@@ -153,3 +153,35 @@ onAuthStateChanged(auth, (user) => {
         window.location.href = "dashboard.html";
     }
 });
+
+// ========================================================= //
+//       --- UPGRADED: SECURE ADMIN PORTAL ACCESS ---        //
+// ========================================================= //
+const adminLoginBtn = document.getElementById('adminLoginBtn');
+if (adminLoginBtn) {
+    adminLoginBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        // ⚠️ REPLACE THESE WITH YOUR EXACT FIREBASE ADMIN ACCOUNT DETAILS
+        const adminEmail = "soulaimanmwamini0@gmail.com"; 
+        const adminPassword = "123456"; 
+
+        try {
+            // Sign in explicitly through Firebase authentication
+            const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+            const user = userCredential.user;
+
+            console.log("Admin verified via Gateway! UID:", user.uid);
+            
+            // Log entry into the unified users document collection
+            await registerUserInFirestore(user, "admin");
+
+            // Redirect smoothly into the chat application area
+            window.location.href = "dashboard.html";
+            
+        } catch (error) {
+            console.error("Admin Portal Access Denied:", error.message);
+            alert("Failed to access Admin Portal: " + error.message);
+        }
+    });
+}
