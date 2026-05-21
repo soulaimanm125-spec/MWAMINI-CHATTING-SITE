@@ -148,23 +148,23 @@ async function registerUserInFirestore(user, role) {
     }, { merge: true });
 }
 
-// 🛡️ SECURITY UPGRADE: Safely direct users based on real database authorization roles
+// 🛡️ SECURITY UPGRADE: Prevent auto-login leaks by evaluating explicit user roles
 onAuthStateChanged(auth, async (user) => {
     if (user && window.location.pathname.endsWith("index.html")) {
-        // 1. Immediately forward Guest accounts
+        // Direct anonymous guest profiles safely
         if (user.isAnonymous) {
             window.location.href = "dashboard.html";
             return;
         }
 
-        // 2. Look up the specific user role saved inside Firestore
+        // Pull explicit user document profile configuration data
         const userDocRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userDocRef);
         
         if (userSnap.exists()) {
             const userData = userSnap.data();
             
-            // Allow entry if they are an admin OR their standard credentials pass checks
+            // Allow auto-redirect if they are verified, phone verified, OR the strict admin role
             if (userData.role === "admin" || user.emailVerified || user.phoneNumber) {
                 window.location.href = "dashboard.html";
             }
@@ -180,17 +180,30 @@ if (adminLoginBtn) {
     adminLoginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         
-        const adminEmail = "soulaimanmwamini0@gmail.com"; 
-        const adminPassword = "123456"; // Put your clear text password string here
+        const typedEmail = emailInput.value.trim();
+        const typedPassword = passwordInput.value;
+
+        // Strict system rule credential match configuration
+        const authorizedAdminEmail = "soulaimanmwamini0@gmail.com"; 
+
+        if (!typedEmail || !typedPassword) {
+            alert("⚠️ Please fill in the Email and Password fields first to use the Admin Portal.");
+            return;
+        }
+
+        if (typedEmail.toLowerCase() !== authorizedAdminEmail.toLowerCase()) {
+            alert("🔴 Access Denied: This portal button is explicitly reserved for the System Administrator.");
+            return;
+        }
 
         try {
             // Sign in explicitly through Firebase authentication
-            const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+            const userCredential = await signInWithEmailAndPassword(auth, typedEmail, typedPassword);
             const user = userCredential.user;
 
             console.log("Admin verified via Gateway! UID:", user.uid);
             
-            // Strictly tag their role document token as admin inside Firestore
+            // Strictly target role document token registration as admin inside Firestore
             await registerUserInFirestore(user, "admin");
 
             // Redirect smoothly into the chat application area
