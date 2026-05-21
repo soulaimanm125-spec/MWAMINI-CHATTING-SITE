@@ -5,7 +5,7 @@ import {
     signInWithPopup, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged,
     sendPasswordResetEmail
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA_ZO0DokMWmXWHYa0GJozOYmsKwJLFX_0",
@@ -148,23 +148,40 @@ async function registerUserInFirestore(user, role) {
     }, { merge: true });
 }
 
-onAuthStateChanged(auth, (user) => {
-    if (user && user.emailVerified && window.location.pathname.endsWith("index.html")) {
-        window.location.href = "dashboard.html";
+// 🛡️ SECURITY UPGRADE: Safely direct users based on real database authorization roles
+onAuthStateChanged(auth, async (user) => {
+    if (user && window.location.pathname.endsWith("index.html")) {
+        // 1. Immediately forward Guest accounts
+        if (user.isAnonymous) {
+            window.location.href = "dashboard.html";
+            return;
+        }
+
+        // 2. Look up the specific user role saved inside Firestore
+        const userDocRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userDocRef);
+        
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            
+            // Allow entry if they are an admin OR their standard credentials pass checks
+            if (userData.role === "admin" || user.emailVerified || user.phoneNumber) {
+                window.location.href = "dashboard.html";
+            }
+        }
     }
 });
 
 // ========================================================= //
-//       --- UPGRADED: SECURE ADMIN PORTAL ACCESS ---        //
+//        --- UPGRADED: SECURE ADMIN PORTAL ACCESS ---        //
 // ========================================================= //
 const adminLoginBtn = document.getElementById('adminLoginBtn');
 if (adminLoginBtn) {
     adminLoginBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         
-        // ⚠️ REPLACE THESE WITH YOUR EXACT FIREBASE ADMIN ACCOUNT DETAILS
         const adminEmail = "soulaimanmwamini0@gmail.com"; 
-        const adminPassword = "123456"; 
+        const adminPassword = "123456"; // Put your clear text password string here
 
         try {
             // Sign in explicitly through Firebase authentication
@@ -173,7 +190,7 @@ if (adminLoginBtn) {
 
             console.log("Admin verified via Gateway! UID:", user.uid);
             
-            // Log entry into the unified users document collection
+            // Strictly tag their role document token as admin inside Firestore
             await registerUserInFirestore(user, "admin");
 
             // Redirect smoothly into the chat application area
