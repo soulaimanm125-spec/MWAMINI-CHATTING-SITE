@@ -510,7 +510,7 @@ document.getElementById("close-requests-modal-btn").addEventListener("click", ()
 //       --- MWAMINI ADMIN ANNOUNCEMENT SYSTEM ---           //
 // ========================================================= //
 
-const ADMIN_UID = "EloNNvt4xzUcKV1WeY0wGRLEBsu1"; // <--- PASTE YOUR UID HERE
+const ADMIN_UID = "2Fc2IbTzdVXnMC2KKzIiVDWnBdz2"; // <--- PASTE YOUR UID HERE
 
 async function postAdminAnnouncement() {
     const postText = document.getElementById('admin-post-input').value;
